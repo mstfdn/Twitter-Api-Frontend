@@ -1,8 +1,9 @@
-// src/services/api.js
 import axios from 'axios';
 
-// API'nin base URL'ini tanımlayalım - doğru URL
-const API_BASE_URL = 'http://localhost:3001';
+// API base URL (uygulamaya proxy eklendiğinde bunu boş bırakabilirsiniz)
+// package.json'a "proxy": "http://localhost:3001" eklediyseniz,
+// baseURL'i boş bırakın veya kaldırın
+const API_BASE_URL = ''; // Proxy kullanımı için boş
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -37,7 +38,7 @@ api.interceptors.response.use(
   }
 );
 
-// Tweet API fonksiyonları
+// Tweet API fonksiyonları - baseURL proxy tarafından yönetilecek
 export const tweetAPI = {
   getAllTweets: () => api.get('/tweet'),
   getTweetById: (id) => api.get(`/tweet/${id}`),

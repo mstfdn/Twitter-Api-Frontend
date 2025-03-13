@@ -1,23 +1,16 @@
-// src/redux/slices/postsSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { tweetAPI } from '../../services/api'; // API servisinizi import edin
 
 // Tweetleri getirme işlemi
 export const fetchPosts = createAsyncThunk(
   'posts/fetchPosts',
   async (_, { rejectWithValue }) => {
     try {
-      // Doğru endpoint: /tweet
-      const response = await fetch('/tweet');
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      return data;
+      const response = await tweetAPI.getAllTweets();
+      return response.data;
     } catch (error) {
       console.error('API Error:', error);
-      return rejectWithValue(error.message || 'Tweetler yüklenirken bir hata oluştu');
+      return rejectWithValue(error.response?.data?.message || error.message || 'Tweetler yüklenirken bir hata oluştu');
     }
   }
 );
@@ -25,30 +18,13 @@ export const fetchPosts = createAsyncThunk(
 // Tweet oluşturma işlemi
 export const createPost = createAsyncThunk(
   'posts/createPost',
-  async (postData, { rejectWithValue, getState }) => {
+  async (postData, { rejectWithValue }) => {
     try {
-      const { auth } = getState();
-      const token = auth.token;
-      
-      // Doğru endpoint: /tweet
-      const response = await fetch('http://localhost:3001/tweet', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify(postData),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      return data;
+      const response = await tweetAPI.createTweet(postData.content);
+      return response.data;
     } catch (error) {
       console.error('API Error:', error);
-      return rejectWithValue(error.message || 'Tweet oluşturulurken bir hata oluştu');
+      return rejectWithValue(error.response?.data?.message || error.message || 'Tweet oluşturulurken bir hata oluştu');
     }
   }
 );
@@ -56,56 +32,26 @@ export const createPost = createAsyncThunk(
 // Like ve Retweet işlemleri
 export const likePost = createAsyncThunk(
   'posts/likePost',
-  async (postId, { rejectWithValue, getState }) => {
+  async (postId, { rejectWithValue }) => {
     try {
-      const { auth } = getState();
-      const token = auth.token;
-      
-      // Doğru endpoint: /tweet/:id/like
-      const response = await fetch(`http://localhost:3001/tweet/${postId}/like`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      return { postId, data };
+      const response = await tweetAPI.likeTweet(postId);
+      return { postId, data: response.data };
     } catch (error) {
       console.error('API Error:', error);
-      return rejectWithValue(error.message || 'Tweet beğenilirken bir hata oluştu');
+      return rejectWithValue(error.response?.data?.message || error.message || 'Tweet beğenilirken bir hata oluştu');
     }
   }
 );
 
 export const retweetPost = createAsyncThunk(
   'posts/retweetPost',
-  async (postId, { rejectWithValue, getState }) => {
+  async (postId, { rejectWithValue }) => {
     try {
-      const { auth } = getState();
-      const token = auth.token;
-      
-      // Doğru endpoint: /tweet/:id/retweet
-      const response = await fetch(`http://localhost:3001/tweet/${postId}/retweet`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      return { postId, data };
+      const response = await tweetAPI.retweetTweet(postId);
+      return { postId, data: response.data };
     } catch (error) {
       console.error('API Error:', error);
-      return rejectWithValue(error.message || 'Tweet retweetlenirken bir hata oluştu');
+      return rejectWithValue(error.response?.data?.message || error.message || 'Tweet retweetlenirken bir hata oluştu');
     }
   }
 );
@@ -149,7 +95,7 @@ const postsSlice = createSlice({
       // Like post
       .addCase(likePost.fulfilled, (state, action) => {
         const { postId, data } = action.payload;
-        const post = state.posts.find(post => post.id === postId);
+        const post = state.posts.find(post => post.id === postId || post._id === postId);
         if (post) {
           post.likes = data.likes;
         }
@@ -158,7 +104,7 @@ const postsSlice = createSlice({
       // Retweet post
       .addCase(retweetPost.fulfilled, (state, action) => {
         const { postId, data } = action.payload;
-        const post = state.posts.find(post => post.id === postId);
+        const post = state.posts.find(post => post.id === postId || post._id === postId);
         if (post) {
           post.retweets = data.retweets;
         }
