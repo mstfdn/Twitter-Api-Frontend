@@ -47,11 +47,42 @@ export const likePost = createAsyncThunk(
 
 export const retweetPost = createAsyncThunk(
   'posts/retweetPost',
-  async (postId, { rejectWithValue }) => {
+  async (postId, { rejectWithValue, dispatch }) => {
     try {
       const response = await tweetAPI.retweetTweet(postId);
-      return { postId, data: response.data };
+      
+      // Başarılı retweet işlemi sonrası bildirim gösteriyoruz
+      toast.success('Tweet başarıyla retweetlendi!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      
+      // Retweet sonrası timeline'ı güncellemek için fetchPosts'u çağırabiliriz
+      // Bu sayede retweet edilen tweet anasayfada görünecek
+      dispatch(fetchPosts());
+      
+      // Backend'den dönen yanıtı uygun formatta dönüştürüyoruz
+      return { 
+        postId, 
+        data: {
+          retweets: response.data.count || 1, // Eğer count yoksa 1 kullanıyoruz
+          isRetweeted: true
+        } 
+      };
     } catch (error) {
+      // Hata durumunda bildirim gösteriyoruz
+      toast.error('Tweet retweetlenirken bir hata oluştu!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
       console.error('API Error:', error);
       return rejectWithValue(error.response?.data?.message || error.message || 'Tweet retweetlenirken bir hata oluştu');
     }
@@ -148,7 +179,13 @@ const postsSlice = createSlice({
         const { postId, data } = action.payload;
         const post = state.posts.find(post => post.id === postId || post._id === postId);
         if (post) {
+          // Retweet sayısını güncelle
           post.retweets = data.retweets;
+          
+          // Kullanıcının retweet ettiğini işaretleyelim (varsa)
+          if (data.isRetweeted !== undefined) {
+            post.isRetweeted = data.isRetweeted;
+          }
         }
       })
       // Noktalı virgül hatası burada düzeltildi (noktalı virgül kaldırıldı)
