@@ -112,7 +112,10 @@ const postsSlice = createSlice({
       })
       .addCase(fetchPosts.fulfilled, (state, action) => {
         state.loading = false;
-        state.posts = action.payload;
+        // Tweetleri createdAt tarihine göre sıralayalım (en yeniden en eskiye)
+        state.posts = action.payload.sort((a, b) => {
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        });
       })
       .addCase(fetchPosts.rejected, (state, action) => {
         state.loading = false;
