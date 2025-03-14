@@ -1,12 +1,16 @@
 // src/components/PostItem.jsx
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { likePost, retweetPost, unretweetPost, deletePost } from '../redux/slices/postsSlice';
+import { likePost, retweetPost, unretweetPost, deletePost, addComment } from '../redux/slices/postsSlice';
 import DeleteConfirmModal from './DeleteConfirmModal';
 
 const PostItem = ({ post }) => {
   const dispatch = useDispatch();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  // Yorum alanını göstermek için state ekliyoruz
+  const [showCommentForm, setShowCommentForm] = useState(false);
+  // Yorum içeriğini tutmak için state ekliyoruz
+  const [commentText, setCommentText] = useState('');
   
   // post.id veya post._id kullanımını kontrol edelim
   const postId = post.id || post._id;
@@ -37,6 +41,24 @@ const PostItem = ({ post }) => {
     setShowDeleteModal(false);
   };
   
+  // Yorum formunu açıp kapatan fonksiyon
+  const toggleCommentForm = () => {
+    setShowCommentForm(!showCommentForm);
+  };
+  
+  // Yorum gönderme fonksiyonu
+  const handleSubmitComment = (e) => {
+    e.preventDefault();
+    if (commentText.trim()) {
+      // Redux action'ını çağır
+      dispatch(addComment({ postId, content: commentText }));
+      // Formu temizle ve kapat
+      setCommentText('');
+      // Yorum gönderildikten sonra formu kapatmak istemiyorsanız bu satırı kaldırabilirsiniz
+      // setShowCommentForm(false);
+    }
+  };
+  
   return (
     <>
       <div className="p-4 border-b border-gray-200">
@@ -59,7 +81,10 @@ const PostItem = ({ post }) => {
             <p className="mt-2 mb-3">{post.content}</p>
             
             <div className="flex justify-between max-w-md">
-              <button className="flex items-center text-gray-500 hover:text-blue-500">
+              <button 
+                onClick={toggleCommentForm}
+                className="flex items-center text-gray-500 hover:text-blue-500"
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
@@ -105,6 +130,26 @@ const PostItem = ({ post }) => {
                 <span>Sil</span>
               </button>
             </div>
+            
+            {/* Add simple comment input that appears on button click */}
+            {showCommentForm && (
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="text"
+                  className="flex-1 p-2 border rounded-lg"
+                  placeholder="Yorum yaz..."
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                />
+                <button
+                  onClick={handleSubmitComment}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                  disabled={!commentText.trim()}
+                >
+                  Gönder
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -6,10 +6,26 @@ import { toast } from 'react-toastify'; // React-Toastify'ı import ediyoruz
 // Tweetleri getirme işlemi
 export const fetchPosts = createAsyncThunk(
   'posts/fetchPosts',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
       const response = await tweetAPI.getAllTweets();
-      return response.data;
+      
+      // Kullanıcının retweet ettiği tweetleri işaretleyelim
+      // Backend'den gelen verilerde retweet bilgisi varsa kullanacağız
+      const tweets = response.data.map(tweet => {
+        // Eğer tweet'in isRetweeted özelliği varsa veya
+        // backend'den gelen başka bir özellik retweet durumunu gösteriyorsa
+        // (örneğin tweet.retweetedByMe, tweet.isRetweetedByCurrentUser vb.)
+        // bu bilgiyi kullanabiliriz
+        
+        // Örnek: Backend'den gelen veriye göre isRetweeted özelliğini ayarlayalım
+        return {
+          ...tweet,
+          isRetweeted: tweet.isRetweetedByCurrentUser || tweet.retweetedByMe || false
+        };
+      });
+      
+      return tweets;
     } catch (error) {
       console.error('API Error:', error);
       return rejectWithValue(error.response?.data?.message || error.message || 'Tweetler yüklenirken bir hata oluştu');
@@ -47,7 +63,7 @@ export const likePost = createAsyncThunk(
 
 export const retweetPost = createAsyncThunk(
   'posts/retweetPost',
-  async (postId, { rejectWithValue, dispatch, getState }) => {
+  async (postId, { rejectWithValue, getState }) => {
     try {
       const response = await tweetAPI.retweetTweet(postId);
       
@@ -172,6 +188,40 @@ export const unretweetPost = createAsyncThunk(
   }
 );
 
+// Yorum ekleme işlemi için yeni bir thunk ekliyoruz
+export const addComment = createAsyncThunk(
+  'posts/addComment',
+  async ({ postId, content }, { rejectWithValue }) => {
+    try {
+      const response = await tweetAPI.addComment(postId, content);
+      
+      // Başarılı yorum işlemi sonrası bildirim gösteriyoruz
+      toast.success('Yorum başarıyla eklendi!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      
+      return { postId, comment: response.data };
+    } catch (error) {
+      // Hata durumunda bildirim gösteriyoruz
+      toast.error('Yorum eklenirken bir hata oluştu!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      console.error('API Error:', error);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Yorum eklenirken bir hata oluştu');
+    }
+  }
+);
+
 const postsSlice = createSlice({
   name: 'posts',
   initialState: {
@@ -260,6 +310,24 @@ builder.addCase(unretweetPost.fulfilled, (state, action) => {
           post.isRetweeted = data.isRetweeted;
         }
       })
+      // Yorum ekleme case'ini ekliyoruz
+      .addCase(addComment.fulfilled, (state, action) => {
+        const { postId, comment } = action.payload;
+        const post = state.posts.find(post => post.id === postId || post._id === postId);
+        if (post) {
+          // Eğer post.comments bir dizi değilse, boş bir dizi oluştur
+          if (!Array.isArray(post.comments)) {
+            post.comments = [];
+          }
+          // Yorumu ekle
+          post.comments.push(comment);
+          // Yorum sayısını güncelle
+          post.commentCount = (post.commentCount || 0) + 1;
+        }
+      })
+      .addCase(addComment.rejected, (state, action) => {
+        state.error = action.payload || 'Yorum eklenirken bir hata oluştu';
+      });
   }
 });
 
