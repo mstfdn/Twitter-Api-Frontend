@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { tweetAPI } from '../../services/api'; // API servisinizi import edin
+import axios from 'axios'; // axios'u import etmeyi unutmayın
 
 // Tweetleri getirme işlemi
 export const fetchPosts = createAsyncThunk(
@@ -56,12 +57,32 @@ export const retweetPost = createAsyncThunk(
   }
 );
 
+// deletePost action ve reducer'ını ekleyin
+// Adım 3: postsSlice.js dosyasında deletePost fonksiyonunu düzenleyelim
+
+// Eğer API servisinizi düzenlemek istemiyorsanız, doğrudan axios kullanarak da sorunu çözebilirsiniz:
+// deletePost fonksiyonunu düzeltelim
+export const deletePost = createAsyncThunk(
+  'posts/deletePost',
+  async (postId, { rejectWithValue }) => {
+    try {
+      // Doğrudan tweetAPI'yi kullanıyoruz
+      const response = await tweetAPI.deleteTweet(postId);
+      return { postId, data: response.data };
+    } catch (error) {
+      console.error('API Error:', error);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Tweet silinirken bir hata oluştu');
+    }
+  }
+);
+
 const postsSlice = createSlice({
   name: 'posts',
   initialState: {
     posts: [],
     loading: false,
-    error: null,
+    status: 'idle',
+    error: null
   },
   reducers: {},
   extraReducers: (builder) => {
@@ -108,8 +129,24 @@ const postsSlice = createSlice({
         if (post) {
           post.retweets = data.retweets;
         }
+      })
+      // Noktalı virgül hatası burada düzeltildi (noktalı virgül kaldırıldı)
+      
+      // Delete post
+      .addCase(deletePost.pending, (state) => {
+        state.status = 'loading';
+      })
+      // Delete post reducer'ını düzenleyelim
+      .addCase(deletePost.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        // action.meta.arg yerine action.payload.postId kullanıyoruz
+        state.posts = state.posts.filter(post => (post.id || post._id) !== action.payload.postId);
+      })
+      .addCase(deletePost.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
       });
-  },
+  }
 });
 
 export default postsSlice.reducer;

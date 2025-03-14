@@ -45,6 +45,9 @@ export const tweetAPI = {
   createTweet: (content) => api.post('/tweet', { content }),
   likeTweet: (id) => api.post(`/tweet/${id}/like`),
   retweetTweet: (id) => api.post(`/tweet/${id}/retweet`),
+  
+  // Tweet silme fonksiyonu - URL yapısını diğer endpoint'lerle tutarlı hale getiriyoruz
+  deleteTweet: (tweetId) => api.delete(`/tweet/${tweetId}`),
 };
 
 // Kullanıcı API fonksiyonları
