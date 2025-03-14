@@ -1,7 +1,7 @@
 // src/components/PostItem.jsx
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { likePost, retweetPost, deletePost } from '../redux/slices/postsSlice';
+import { likePost, retweetPost, unretweetPost, deletePost } from '../redux/slices/postsSlice';
 import DeleteConfirmModal from './DeleteConfirmModal';
 
 const PostItem = ({ post }) => {
@@ -16,7 +16,12 @@ const PostItem = ({ post }) => {
   };
   
   const handleRetweet = () => {
-    dispatch(retweetPost(postId));
+    // Eğer tweet zaten retweet edilmişse, unretweet işlemi yapıyoruz
+    if (post.isRetweeted) {
+      dispatch(unretweetPost(postId));
+    } else {
+      dispatch(retweetPost(postId));
+    }
   };
   
   const openDeleteModal = () => {
@@ -72,7 +77,7 @@ const PostItem = ({ post }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 <span>{post.retweets || 0}</span>
-                </button>
+              </button>
               
               <button 
                 onClick={handleLike}

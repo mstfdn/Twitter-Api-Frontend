@@ -46,6 +46,8 @@ export const tweetAPI = {
   likeTweet: (id) => api.post(`/tweet/${id}/like`),
   // Retweet endpoint'ini düzeltiyoruz
   retweetTweet: (id) => api.post(`/retweet/${id}`),
+  // Retweet'i geri alma fonksiyonu ekliyoruz
+  unretweetTweet: (id) => api.delete(`/retweet/${id}`),
   // Tweet silme fonksiyonu - api nesnesini kullanarak
   deleteTweet: (tweetId) => api.delete(`/tweet/${tweetId}`),
 };

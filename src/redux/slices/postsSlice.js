@@ -47,9 +47,14 @@ export const likePost = createAsyncThunk(
 
 export const retweetPost = createAsyncThunk(
   'posts/retweetPost',
-  async (postId, { rejectWithValue, dispatch }) => {
+  async (postId, { rejectWithValue, dispatch, getState }) => {
     try {
       const response = await tweetAPI.retweetTweet(postId);
+      
+      // Mevcut retweet sayısını alalım
+      const state = getState();
+      const post = state.posts.posts.find(p => (p.id === postId || p._id === postId));
+      const currentRetweetCount = post ? (post.retweets || 0) : 0;
       
       // Başarılı retweet işlemi sonrası bildirim gösteriyoruz
       toast.success('Tweet başarıyla retweetlendi!', {
@@ -61,15 +66,12 @@ export const retweetPost = createAsyncThunk(
         draggable: true,
       });
       
-      // Retweet sonrası timeline'ı güncellemek için fetchPosts'u çağırabiliriz
-      // Bu sayede retweet edilen tweet anasayfada görünecek
-      dispatch(fetchPosts());
-      
       // Backend'den dönen yanıtı uygun formatta dönüştürüyoruz
       return { 
         postId, 
         data: {
-          retweets: response.data.count || 1, // Eğer count yoksa 1 kullanıyoruz
+          // Eğer backend count dönüyorsa onu kullan, yoksa mevcut sayıyı 1 artır
+          retweets: response.data.count || (currentRetweetCount + 1),
           isRetweeted: true
         } 
       };
@@ -121,6 +123,51 @@ export const deletePost = createAsyncThunk(
       });
       console.error('API Error:', error);
       return rejectWithValue(error.response?.data?.message || error.message || 'Tweet silinirken bir hata oluştu');
+    }
+  }
+);
+
+// Unretweet işlemi için yeni bir thunk ekliyoruz
+export const unretweetPost = createAsyncThunk(
+  'posts/unretweetPost',
+  async (postId, { rejectWithValue, getState }) => {
+    try {
+      const response = await tweetAPI.unretweetTweet(postId);
+      
+      // Mevcut retweet sayısını alalım
+      const state = getState();
+      const post = state.posts.posts.find(p => (p.id === postId || p._id === postId));
+      const currentRetweetCount = post ? (post.retweets || 0) : 0;
+      
+      // Başarılı unretweet işlemi sonrası bildirim gösteriyoruz
+      toast.info('Retweet geri alındı', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      
+      return { 
+        postId, 
+        data: {
+          // Retweet sayısını 1 azaltıyoruz (en az 0 olacak şekilde)
+          retweets: response.data.count || Math.max(0, currentRetweetCount - 1),
+          isRetweeted: false
+        } 
+      };
+    } catch (error) {
+      toast.error('Retweet geri alınırken bir hata oluştu!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      console.error('API Error:', error);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Retweet geri alınırken bir hata oluştu');
     }
   }
 );
@@ -204,6 +251,15 @@ const postsSlice = createSlice({
         state.status = 'failed';
         state.error = action.payload;
       });
+      // Unretweet case'ini ekliyoruz
+builder.addCase(unretweetPost.fulfilled, (state, action) => {
+        const { postId, data } = action.payload;
+        const post = state.posts.find(post => post.id === postId || post._id === postId);
+        if (post) {
+          post.retweets = data.retweets;
+          post.isRetweeted = data.isRetweeted;
+        }
+      })
   }
 });
 
