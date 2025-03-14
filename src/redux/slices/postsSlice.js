@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { tweetAPI } from '../../services/api'; // API servisinizi import edin
 import axios from 'axios'; // axios'u import etmeyi unutmayın
+import { toast } from 'react-toastify'; // React-Toastify'ı import ediyoruz
 
 // Tweetleri getirme işlemi
 export const fetchPosts = createAsyncThunk(
@@ -66,10 +67,27 @@ export const deletePost = createAsyncThunk(
   'posts/deletePost',
   async (postId, { rejectWithValue }) => {
     try {
-      // Doğrudan tweetAPI'yi kullanıyoruz
       const response = await tweetAPI.deleteTweet(postId);
+      // Başarılı silme işlemi sonrası bildirim gösteriyoruz
+      toast.success('Tweet başarıyla silindi!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
       return { postId, data: response.data };
     } catch (error) {
+      // Hata durumunda bildirim gösteriyoruz
+      toast.error('Tweet silinirken bir hata oluştu!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
       console.error('API Error:', error);
       return rejectWithValue(error.response?.data?.message || error.message || 'Tweet silinirken bir hata oluştu');
     }
