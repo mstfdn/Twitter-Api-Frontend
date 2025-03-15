@@ -10,22 +10,33 @@ export const fetchPosts = createAsyncThunk(
     try {
       const response = await tweetAPI.getAllTweets();
       
-      // Tweetleri işleyelim ve her tweet için yorumları da alalım
+      // Tweetleri işleyelim ve her tweet için yorumları ve like durumunu da alalım
       const tweets = await Promise.all(response.data.map(async tweet => {
-        // Tweet'in yorumlarını getir
         try {
+          // Tweet'in yorumlarını getir
           const commentsResponse = await tweetAPI.getCommentsByTweetId(tweet.id || tweet._id);
+          
+          // Tweet'in like durumunu kontrol et
+          const likeStatusResponse = await tweetAPI.checkLikeStatus(tweet.id || tweet._id);
+          
+          // Tweet'in like sayısını al
+          const likeCountResponse = await tweetAPI.getLikeCount(tweet.id || tweet._id);
+          
           return {
             ...tweet,
             comments: commentsResponse.data || [],
-            isRetweeted: tweet.isRetweetedByCurrentUser || tweet.retweetedByMe || false
+            isRetweeted: tweet.isRetweetedByCurrentUser || tweet.retweetedByMe || false,
+            isLiked: likeStatusResponse.data.isLiked || false,
+            likes: likeCountResponse.data.count || tweet.likes || 0
           };
         } catch (error) {
-          console.error(`Tweet ${tweet.id} için yorumlar alınamadı:`, error);
+          console.error(`Tweet ${tweet.id || tweet._id} için ek bilgiler alınamadı:`, error);
           return {
             ...tweet,
             comments: [],
-            isRetweeted: tweet.isRetweetedByCurrentUser || tweet.retweetedByMe || false
+            isRetweeted: tweet.isRetweetedByCurrentUser || tweet.retweetedByMe || false,
+            isLiked: tweet.isLikedByCurrentUser || tweet.likedByMe || false,
+            likes: tweet.likes || 0
           };
         }
       }));
@@ -37,6 +48,93 @@ export const fetchPosts = createAsyncThunk(
     }
   }
 );
+
+// Like işlemleri - Tek bir likePost fonksiyonu tanımlıyoruz
+export const likePost = createAsyncThunk(
+  'posts/likePost',
+  async (postId, { rejectWithValue, getState }) => {
+    try {
+      // Mevcut like durumunu kontrol et
+      const state = getState();
+      const post = state.posts.posts.find(p => (p.id === postId || p._id === postId));
+      const isLiked = post ? post.isLiked : false;
+      
+      let response;
+      
+      // Eğer zaten like edilmişse unlike yap, edilmemişse like yap
+      if (isLiked) {
+        response = await tweetAPI.unlikeTweet(postId);
+        
+        // Başarılı unlike işlemi sonrası bildirim gösteriyoruz
+        toast.info('Beğeni geri alındı', {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+        
+        // Like sayısını al
+        const likeCountResponse = await tweetAPI.getLikeCount(postId);
+        
+        return { 
+          postId, 
+          data: {
+            likes: likeCountResponse.data.count || Math.max(0, (post.likes || 0) - 1),
+            isLiked: false
+          } 
+        };
+      } else {
+        response = await tweetAPI.likeTweet(postId);
+        
+        // Başarılı like işlemi sonrası bildirim gösteriyoruz
+        toast.success('Tweet beğenildi!', {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+        
+        // Like sayısını al
+        const likeCountResponse = await tweetAPI.getLikeCount(postId);
+        
+        return { 
+          postId, 
+          data: {
+            likes: likeCountResponse.data.count || (post.likes || 0) + 1,
+            isLiked: true
+          } 
+        };
+      }
+    } catch (error) {
+      // Hata durumunda bildirim gösteriyoruz
+      toast.error('Beğeni işlemi sırasında bir hata oluştu!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      console.error('API Error:', error);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Beğeni işlemi sırasında bir hata oluştu');
+    }
+  }
+);
+
+// ÖNEMLİ: Aşağıdaki satırları SİLİN (duplicate likePost ve standalone addCase)
+// extraReducers içinde likePost.fulfilled case'ini güncelle
+// .addCase(likePost.fulfilled, (state, action) => {
+//   const { postId, data } = action.payload;
+//   const post = state.posts.find(post => post.id === postId || post._id === postId);
+//   if (post) {
+//     post.likes = data.likes;
+//     post.isLiked = data.isLiked;
+//   }
+// })
 
 // Tweet oluşturma işlemi
 export const createPost = createAsyncThunk(
@@ -52,19 +150,20 @@ export const createPost = createAsyncThunk(
   }
 );
 
+// ÖNEMLİ: Aşağıdaki satırları SİLİN (duplicate likePost)
 // Like ve Retweet işlemleri
-export const likePost = createAsyncThunk(
-  'posts/likePost',
-  async (postId, { rejectWithValue }) => {
-    try {
-      const response = await tweetAPI.likeTweet(postId);
-      return { postId, data: response.data };
-    } catch (error) {
-      console.error('API Error:', error);
-      return rejectWithValue(error.response?.data?.message || error.message || 'Tweet beğenilirken bir hata oluştu');
-    }
-  }
-);
+// export const likePost = createAsyncThunk(
+//   'posts/likePost',
+//   async (postId, { rejectWithValue }) => {
+//     try {
+//       const response = await tweetAPI.likeTweet(postId);
+//       return { postId, data: response.data };
+//     } catch (error) {
+//       console.error('API Error:', error);
+//       return rejectWithValue(error.response?.data?.message || error.message || 'Tweet beğenilirken bir hata oluştu');
+//     }
+//   }
+// );
 
 export const retweetPost = createAsyncThunk(
   'posts/retweetPost',
@@ -267,12 +366,13 @@ const postsSlice = createSlice({
         state.error = action.payload || 'Tweet oluşturulurken bir hata oluştu';
       })
       
-      // Like post
+      // Like post - isLiked durumunu da güncelliyoruz
       .addCase(likePost.fulfilled, (state, action) => {
         const { postId, data } = action.payload;
         const post = state.posts.find(post => post.id === postId || post._id === postId);
         if (post) {
           post.likes = data.likes;
+          post.isLiked = data.isLiked;
         }
       })
       
@@ -290,13 +390,11 @@ const postsSlice = createSlice({
           }
         }
       })
-      // Noktalı virgül hatası burada düzeltildi (noktalı virgül kaldırıldı)
       
       // Delete post
       .addCase(deletePost.pending, (state) => {
         state.status = 'loading';
       })
-      // Delete post reducer'ını düzenleyelim
       .addCase(deletePost.fulfilled, (state, action) => {
         state.status = 'succeeded';
         // action.meta.arg yerine action.payload.postId kullanıyoruz
@@ -305,9 +403,10 @@ const postsSlice = createSlice({
       .addCase(deletePost.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload;
-      });
+      })
+      
       // Unretweet case'ini ekliyoruz
-builder.addCase(unretweetPost.fulfilled, (state, action) => {
+      .addCase(unretweetPost.fulfilled, (state, action) => {
         const { postId, data } = action.payload;
         const post = state.posts.find(post => post.id === postId || post._id === postId);
         if (post) {
@@ -315,6 +414,7 @@ builder.addCase(unretweetPost.fulfilled, (state, action) => {
           post.isRetweeted = data.isRetweeted;
         }
       })
+      
       // Yorum ekleme case'ini ekliyoruz
       .addCase(addComment.fulfilled, (state, action) => {
         const { postId, comment } = action.payload;

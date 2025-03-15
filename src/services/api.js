@@ -43,11 +43,15 @@ export const tweetAPI = {
   getAllTweets: () => api.get('/tweet'),
   getTweetById: (id) => api.get(`/tweet/${id}`),
   createTweet: (content) => api.post('/tweet', { content }),
-  likeTweet: (id) => api.post(`/tweet/${id}/like`),
+  // Like işlemleri için yeni endpointler
+  likeTweet: (id) => api.post(`/like/${id}`),
+  unlikeTweet: (id) => api.delete(`/like/${id}`),
+  checkLikeStatus: (id) => api.get(`/like/check/${id}`),
+  getLikeCount: (id) => api.get(`/like/count/${id}`),
+  // Diğer fonksiyonlar
   retweetTweet: (id) => api.post(`/retweet/${id}`),
   unretweetTweet: (id) => api.delete(`/retweet/${id}`),
   addComment: (tweetId, content) => api.post(`/comment/${tweetId}`, { content }),
-  // Yeni fonksiyon: Tweet'in yorumlarını getir
   getCommentsByTweetId: (tweetId) => api.get(`/comment/tweet/${tweetId}`),
   deleteTweet: (tweetId) => api.delete(`/tweet/${tweetId}`),
 };
