@@ -7,8 +7,8 @@ import DeleteConfirmModal from './DeleteConfirmModal';
 const PostItem = ({ post }) => {
   const dispatch = useDispatch();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  // Yorum alanını göstermek için state ekliyoruz
-  const [showCommentForm, setShowCommentForm] = useState(false);
+  // Yorum alanını ve yorumları göstermek için tek bir state kullanıyoruz
+  const [showComments, setShowComments] = useState(false);
   // Yorum içeriğini tutmak için state ekliyoruz
   const [commentText, setCommentText] = useState('');
   
@@ -42,8 +42,8 @@ const PostItem = ({ post }) => {
   };
   
   // Yorum formunu açıp kapatan fonksiyon
-  const toggleCommentForm = () => {
-    setShowCommentForm(!showCommentForm);
+  const toggleComments = () => {
+    setShowComments(!showComments);
   };
   
   // Yorum gönderme fonksiyonu
@@ -83,13 +83,12 @@ const PostItem = ({ post }) => {
             
             <div className="flex justify-between max-w-md">
               <button 
-                onClick={toggleCommentForm}
+                onClick={toggleComments}
                 className="flex items-center text-gray-500 hover:text-blue-500"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
-                {/* Yorum sayısını doğru şekilde gösteriyoruz */}
                 <span>{Array.isArray(post.comments) ? post.comments.length : (post.commentCount || 0)}</span>
               </button>
               
@@ -133,23 +132,46 @@ const PostItem = ({ post }) => {
               </button>
             </div>
             
-            {/* Add simple comment input that appears on button click */}
-            {showCommentForm && (
-              <div className="mt-3 flex gap-2">
-                <input
-                  type="text"
-                  className="flex-1 p-2 border rounded-lg"
-                  placeholder="Yorum yaz..."
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                />
-                <button
-                  onClick={handleSubmitComment}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
-                  disabled={!commentText.trim()}
-                >
-                  Gönder
-                </button>
+            {/* Yorum formu ve yorumlar sadece showComments true olduğunda görünecek */}
+            {showComments && (
+              <div className="mt-3">
+                {/* Yorum formu */}
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    className="flex-1 p-2 border rounded-lg"
+                    placeholder="Yorum yaz..."
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                  />
+                  <button
+                    onClick={handleSubmitComment}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                    disabled={!commentText.trim()}
+                  >
+                    Gönder
+                  </button>
+                </div>
+                
+                {/* Yorumlar */}
+                {Array.isArray(post.comments) && post.comments.length > 0 && (
+                  <div className="border-t pt-3">
+                    <h3 className="font-bold text-gray-700 mb-2">Yorumlar</h3>
+                    {post.comments.map((comment, index) => (
+                      <div key={comment.id || index} className="mb-3 pb-3 border-b border-gray-100">
+                        <div className="flex items-center mb-1">
+                          <span className="font-semibold mr-1">
+                            {comment.user?.username || 'Anonim'}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ''}
+                          </span>
+                        </div>
+                        <p className="text-gray-800">{comment.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

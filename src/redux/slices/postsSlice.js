@@ -10,20 +10,25 @@ export const fetchPosts = createAsyncThunk(
     try {
       const response = await tweetAPI.getAllTweets();
       
-      // Kullanıcının retweet ettiği tweetleri işaretleyelim
-      // Backend'den gelen verilerde retweet bilgisi varsa kullanacağız
-      const tweets = response.data.map(tweet => {
-        // Eğer tweet'in isRetweeted özelliği varsa veya
-        // backend'den gelen başka bir özellik retweet durumunu gösteriyorsa
-        // (örneğin tweet.retweetedByMe, tweet.isRetweetedByCurrentUser vb.)
-        // bu bilgiyi kullanabiliriz
-        
-        // Örnek: Backend'den gelen veriye göre isRetweeted özelliğini ayarlayalım
-        return {
-          ...tweet,
-          isRetweeted: tweet.isRetweetedByCurrentUser || tweet.retweetedByMe || false
-        };
-      });
+      // Tweetleri işleyelim ve her tweet için yorumları da alalım
+      const tweets = await Promise.all(response.data.map(async tweet => {
+        // Tweet'in yorumlarını getir
+        try {
+          const commentsResponse = await tweetAPI.getCommentsByTweetId(tweet.id || tweet._id);
+          return {
+            ...tweet,
+            comments: commentsResponse.data || [],
+            isRetweeted: tweet.isRetweetedByCurrentUser || tweet.retweetedByMe || false
+          };
+        } catch (error) {
+          console.error(`Tweet ${tweet.id} için yorumlar alınamadı:`, error);
+          return {
+            ...tweet,
+            comments: [],
+            isRetweeted: tweet.isRetweetedByCurrentUser || tweet.retweetedByMe || false
+          };
+        }
+      }));
       
       return tweets;
     } catch (error) {
