@@ -45,18 +45,15 @@ export const tweetAPI = {
   createTweet: (content) => api.post('/tweet', { content }),
   likeTweet: (id) => api.post(`/tweet/${id}/like`),
   // Retweet endpoint'ini düzeltiyoruz
-  // Retweet işlemi - Backend'e retweet durumunu kaydedelim
   retweetTweet: (id) => api.post(`/retweet/${id}`),
   
-  // Unretweet işlemi - Backend'den retweet'i kaldıralım
+  // Unretweet işlemi
   unretweetTweet: (id) => api.delete(`/retweet/${id}`),
-  // Tweet silme fonksiyonu - api nesnesini kullanarak
-  deleteTweet: (tweetId) => api.delete(`/tweet/${tweetId}`),
   
-  // Yorum ekleme fonksiyonu
-  addComment: (tweetId, content) => api.post(`/tweet/${tweetId}/comment`, { content }),
+  // Yorum ekleme fonksiyonu - backend'deki endpoint'e uygun olarak düzeltildi
+  addComment: (tweetId, content) => api.post(`/comment/${tweetId}`, { content }),
   
-  // Tweet silme fonksiyonu - api nesnesini kullanarak
+  // Tweet silme fonksiyonu
   deleteTweet: (tweetId) => api.delete(`/tweet/${tweetId}`),
 };
 
