@@ -12,8 +12,68 @@ const PostItem = ({ post }) => {
   // Yorum içeriğini tutmak için state ekliyoruz
   const [commentText, setCommentText] = useState('');
   
+  // Tweet düzenleme için state'ler
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(post.content);
+  
+  // Yorum düzenleme için state'ler
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editedCommentContent, setEditedCommentContent] = useState('');
+  
+  // Dropdown menüler için state'ler
+  const [showTweetMenu, setShowTweetMenu] = useState(false);
+  const [showCommentMenu, setShowCommentMenu] = useState(null);
+  
   // post.id veya post._id kullanımını kontrol edelim
   const postId = post.id || post._id;
+  
+  // Tweet düzenleme modunu aç/kapat
+  const toggleEditMode = () => {
+    setIsEditing(!isEditing);
+    setEditedContent(post.content);
+    setShowTweetMenu(false); // Menüyü kapat
+  };
+  
+  // Tweet düzenleme işlemini kaydet
+  const handleSaveEdit = () => {
+    if (editedContent.trim() !== '') {
+      // Redux action'ı oluşturulmalı (henüz yok)
+      // dispatch(updatePost({ postId, content: editedContent }));
+      
+      // API entegrasyonu olmadığı için şimdilik console'a yazdıralım
+      console.log('Tweet düzenlendi:', { postId, content: editedContent });
+      
+      // Düzenleme modunu kapat
+      setIsEditing(false);
+    }
+  };
+  
+  // Düzenleme işlemini iptal et
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditingCommentId(null);
+  };
+  
+  // Yorum düzenleme modunu aç
+  const startEditingComment = (comment) => {
+    setEditingCommentId(comment.id || comment._id);
+    setEditedCommentContent(comment.content);
+    setShowCommentMenu(null); // Menüyü kapat
+  };
+  
+  // Yorum düzenleme işlemini kaydet
+  const handleSaveCommentEdit = (commentId) => {
+    if (editedCommentContent.trim() !== '') {
+      // Redux action'ı oluşturulmalı (henüz yok)
+      // dispatch(updateComment({ postId, commentId, content: editedCommentContent }));
+      
+      // API entegrasyonu olmadığı için şimdilik console'a yazdıralım
+      console.log('Yorum düzenlendi:', { postId, commentId, content: editedCommentContent });
+      
+      // Düzenleme modunu kapat
+      setEditingCommentId(null);
+    }
+  };
   
   // handleLike fonksiyonunu güncelle
   const handleLike = () => {
@@ -93,16 +153,75 @@ const PostItem = ({ post }) => {
             className="w-12 h-12 rounded-full mr-3"
           />
           <div className="flex-1">
-            <div className="flex items-center">
-              <span className="font-bold mr-1">{post.user?.name || post.username || 'İsimsiz'}</span>
-              <span className="text-gray-500">@{post.user?.username || post.username || 'anonim'}</span>
-              <span className="mx-1 text-gray-500">·</span>
-              <span className="text-gray-500">
-                {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Tarih yok'}
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="font-bold mr-1">{post.user?.name || post.username || 'İsimsiz'}</span>
+                <span className="text-gray-500">@{post.user?.username || post.username || 'anonim'}</span>
+                <span className="mx-1 text-gray-500">·</span>
+                <span className="text-gray-500">
+                  {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Tarih yok'}
+                </span>
+              </div>
+              
+              {/* Tweet için 3 nokta menüsü */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowTweetMenu(!showTweetMenu)}
+                  className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                  </svg>
+                </button>
+                
+                {showTweetMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                    <div className="py-1">
+                      <button
+                        onClick={toggleEditMode}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Güncelle
+                      </button>
+                      <button
+                        onClick={openDeleteModal}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                      >
+                        Sil
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             
-            <p className="mt-2 mb-3">{post.content}</p>
+            {/* Tweet içeriği - düzenleme modu açıksa input göster, değilse normal metin */}
+            {isEditing ? (
+              <div className="mt-2 mb-3">
+                <textarea
+                  className="w-full p-2 border rounded-lg"
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  rows={3}
+                />
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={handleSaveEdit}
+                    className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                  >
+                    Güncelle
+                  </button>
+                  <button
+                    onClick={cancelEditing}
+                    className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                  >
+                    İptal
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-2 mb-3">{post.content}</p>
+            )}
             
             <div className="flex justify-between max-w-md">
               <button 
@@ -182,15 +301,69 @@ const PostItem = ({ post }) => {
                     <h3 className="font-bold text-gray-700 mb-2">Yorumlar</h3>
                     {post.comments.map((comment, index) => (
                       <div key={comment.id || index} className="mb-3 pb-3 border-b border-gray-100">
-                        <div className="flex items-center mb-1">
-                          <span className="font-semibold mr-1">
-                            {comment.user?.username || 'Anonim'}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ''}
-                          </span>
+                        <div className="flex items-center mb-1 justify-between">
+                          <div>
+                            <span className="font-semibold mr-1">
+                              {comment.user?.username || 'Anonim'}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ''}
+                            </span>
+                          </div>
+                          
+                          {/* Yorum için 3 nokta menüsü */}
+                          <div className="relative">
+                            <button 
+                              onClick={() => setShowCommentMenu(showCommentMenu === (comment.id || index) ? null : (comment.id || index))}
+                              className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                              </svg>
+                            </button>
+                            
+                            {showCommentMenu === (comment.id || index) && (
+                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                <div className="py-1">
+                                  <button
+                                    onClick={() => startEditingComment(comment)}
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                  >
+                                    Güncelle
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-gray-800">{comment.content}</p>
+                        
+                        {/* Yorum içeriği - düzenleme modu açıksa input göster, değilse normal metin */}
+                        {editingCommentId === (comment.id || comment._id) ? (
+                          <div>
+                            <textarea
+                              className="w-full p-2 border rounded-lg text-sm"
+                              value={editedCommentContent}
+                              onChange={(e) => setEditedCommentContent(e.target.value)}
+                              rows={2}
+                            />
+                            <div className="flex gap-2 mt-1">
+                              <button
+                                onClick={() => handleSaveCommentEdit(comment.id || comment._id)}
+                                className="px-2 py-1 text-xs bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                              >
+                                Güncelle
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                className="px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                              >
+                                İptal
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-gray-800">{comment.content}</p>
+                        )}
                       </div>
                     ))}
                   </div>
